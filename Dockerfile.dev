@@ -1,0 +1,11 @@
+FROM node:16-alpine
+
+WORKDIR '/app'
+#We first copy the package.json file 
+COPY package.json .
+#Then run npm install
+RUN npm install
+# Then Copy . .  takes all the files in the frontend directory(except the build folder)
+# The files and folders are then copied into the working directory of 'app'
+COPY . .
+CMD ["npm", "run", "start"]
