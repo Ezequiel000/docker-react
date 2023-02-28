@@ -1,29 +1,36 @@
-name: Deploy Frontend
+name: deploy-to-eb
+
 on:
   push:
-    branches:
-      - master # check your repo, your default branch might be master!
+    branches: [ master ]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
-      - run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
-      - run: docker build -t cygnetops/react-test -f Dockerfile.dev .
-      - run: docker run -e CI=true cygnetops/react-test npm test
 
-      - name: Generate deployment package
+      - name: Create ZIP deployment package
         run: zip -r deploy_package.zip ./
 
-      - name: Deploy to EB
-        uses: einaregilsson/beanstalk-deploy@v18
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_KEY }}
-          application_name: docker-react
-          environment_name: Dockerreact-env
-          existing_bucket_name: elasticbeanstalk-us-east-1-194221247544
-          region: us-east-1
-          version_label: ${{ github.sha }}
-          deployment_package: deploy.zip
+          aws-access-key-id: ${{ secrets.ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: "us-east-1"
+
+      - name: Upload package to S3 bucket
+        run: aws s3 cp deploy_package.zip s3://docker-react-ezequiel/
+
+      - name: Create new ElasticBeanstalk Application Version
+        run: |
+          aws elasticbeanstalk create-application-version \
+          --application-name docker-react \
+          --source-bundle S3Bucket="docker-react-ezequiel",S3Key="deploy_package.zip" \
+          --version-label "ver-${{ github.sha }}" \
+          --description "commit-sha-${{ github.sha }}"
+
+      - name: Deploy new ElasticBeanstalk Application Version
+        run: aws elasticbeanstalk update-environment --environment-name Dockerreact-env --version-label "ver-${{ github.sha }}"
