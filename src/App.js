@@ -15,8 +15,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Learn Kubernetes get $$$$$ $ $ 4 $
-        </a>
+          Learn Docker
       </header>
     </div>
   );
